@@ -31,6 +31,8 @@ V2_ID=${V2_ID:-"d007eab8-ac2a-4a7f-287a-f0d50ef08680"}
 V2_PATH=${V2_PATH:-"path"}
 ALTER_ID=${ALTER_ID:-"1"}
 mkdir -p $IBM_APP_NAME
+mkdir -p $IBM_APP_NAME2
+mkdir -p $IBM_APP_NAME3
 
 if [ ! -f "./config/v2ray" ]; then
     echo "${BLUE}download v2ray${END}"
@@ -38,7 +40,7 @@ if [ ! -f "./config/v2ray" ]; then
     new_ver=$(curl -s https://github.com/v2fly/v2ray-core/releases/latest | grep -Po "(\d+\.){2}\d+")
     wget -q -Ov2ray.zip https://github.com/v2fly/v2ray-core/releases/download/v${new_ver}/v2ray-linux-64.zip
     if [ $? -eq 0 ]; then
-        7z x v2ray.zip v2ray v2ctl
+        7z x v2ray.zip v2ray v2ctl geoip.dat geosite.dat
         chmod 700 v2ctl v2ray
     else
         echo "${RED}download new version failed!${END}"
@@ -56,6 +58,8 @@ sed "s/IBM_MEMORY/${IBM_MEMORY}/" ./$IBM_APP_NAME/manifest.yml -i
 # v2ray config
 cp -vf ./config/v2ray ./$IBM_APP_NAME/$IBM_APP_NAME
 cp -vf ./config/v2ctl ./$IBM_APP_NAME/
+cp -vf ./config/geoip.dat ./$IBM_APP_NAME/
+cp -vf ./config/geosite.dat ./$IBM_APP_NAME/
 {
     echo "#! /bin/bash"
     echo "wget https://raw.githubusercontent.com/$GITHUB_REPOSITORY/master/config/config.json"
@@ -65,6 +69,46 @@ cp -vf ./config/v2ctl ./$IBM_APP_NAME/
 
 } > ./$IBM_APP_NAME/d.sh
 chmod +x ./$IBM_APP_NAME/d.sh
+
+# cloudfoundry2 config
+cp -rvf ./config/manifest.yml ./$IBM_APP_NAME2/
+sed "s/IBM_APP_NAME/${IBM_APP_NAME2}/" ./$IBM_APP_NAME2/manifest.yml -i
+sed "s/IBM_MEMORY/${IBM_MEMORY2}/" ./$IBM_APP_NAME2/manifest.yml -i
+
+# v2ray2 config
+cp -vf ./config/v2ray ./$IBM_APP_NAME2/$IBM_APP_NAME2
+cp -vf ./config/v2ctl ./$IBM_APP_NAME2/
+cp -vf ./config/geoip.dat ./$IBM_APP_NAME2/
+cp -vf ./config/geosite.dat ./$IBM_APP_NAME2/
+{
+    echo "#! /bin/bash"
+    echo "wget https://raw.githubusercontent.com/$GITHUB_REPOSITORY/master/config/config.json"
+    echo "sed 's/V2_ID/$V2_ID2/' config.json -i"
+    echo "sed 's/V2_PATH/$V2_PATH2/' config.json -i"
+    echo "sed 's/ALTER_ID/$ALTER_ID2/' config.json -i"
+
+} > ./$IBM_APP_NAME2/d.sh
+chmod +x ./$IBM_APP_NAME2/d.sh
+
+# cloudfoundry3 config
+cp -rvf ./config/manifest.yml ./$IBM_APP_NAME3/
+sed "s/IBM_APP_NAME/${IBM_APP_NAME3}/" ./$IBM_APP_NAME3/manifest.yml -i
+sed "s/IBM_MEMORY/${IBM_MEMORY3}/" ./$IBM_APP_NAME3/manifest.yml -i
+
+# v2ray3 config
+cp -vf ./config/v2ray ./$IBM_APP_NAME3/$IBM_APP_NAME3
+cp -vf ./config/v2ctl ./$IBM_APP_NAME3/
+cp -vf ./config/geoip.dat ./$IBM_APP_NAME3/
+cp -vf ./config/geosite.dat ./$IBM_APP_NAME3/
+{
+    echo "#! /bin/bash"
+    echo "wget https://raw.githubusercontent.com/$GITHUB_REPOSITORY/master/config/config.json"
+    echo "sed 's/V2_ID/$V2_ID3/' config.json -i"
+    echo "sed 's/V2_PATH/$V2_PATH3/' config.json -i"
+    echo "sed 's/ALTER_ID/$ALTER_ID3/' config.json -i"
+
+} > ./$IBM_APP_NAME3/d.sh
+chmod +x ./$IBM_APP_NAME3/d.sh
 
 #cat ./$IBM_APP_NAME/d.sh
 #exit 0
@@ -98,8 +142,25 @@ cd ./$IBM_APP_NAME
 echo "${BLUE}cf push${END}"
 $CF push
 
+cd ../$IBM_APP_NAME2
+#echo "${BLUE}ibmcloud cf push${END}"
+#$IBMCLOUD cf push
+echo "${BLUE}cf push${END}"
+$CF push
+
+cd ../$IBM_APP_NAME3
+#echo "${BLUE}ibmcloud cf push${END}"
+#$IBMCLOUD cf push
+echo "${BLUE}cf push${END}"
+$CF push
+
 if [ $? -ne 0 ]; then
     echo "${BLUE}print error${END}"
+    cd ../$IBM_APP_NAME
     $CF logs $IBM_APP_NAME --recent
+    cd ../$IBM_APP_NAME2
+    $CF logs $IBM_APP_NAME2 --recent
+    cd ../$IBM_APP_NAME3
+    $CF logs $IBM_APP_NAME3 --recent
     exit 1
 fi
